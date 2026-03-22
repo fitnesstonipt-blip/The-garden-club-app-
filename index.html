@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Garden Club</title>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    const supabase = createClient("https://gkvqhomtqemqjsrmckxu.supabase.co", "sb_publishable_Jg_Cbx6ItC9JalWwkC6IZQ_HlQj0u_j");
+    window.supabase = supabase;
+  </script>
+  <style>
+    body{background:#2D3E24;color:#F5F5DC;font-family:sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;padding:20px;text-align:center;}
+    .card{background:rgba(245,245,220,0.05);padding:30px;border-radius:20px;border:1px solid rgba(245,245,220,0.1);width:100%;max-width:350px;}
+    h1{letter-spacing:0.3em;font-weight:300;font-size:20px;margin-bottom:30px;}
+    input{width:100%;padding:12px;margin:10px 0;border-radius:10px;border:1px solid rgba(245,245,220,0.2);background:rgba(0,0,0,0.2);color:#fff;outline:none;}
+    button{width:100%;padding:15px;margin-top:20px;border-radius:10px;border:none;background:#F5F5DC;color:#2D3E24;font-weight:bold;text-transform:uppercase;letter-spacing:0.1em;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>THE GARDEN CLUB</h1>
+    <input id="email" type="email" placeholder="E-mail">
+    <input id="pass" type="password" placeholder="Password">
+    <button onclick="auth()">Entrar no Clube</button>
+    <p id="msg" style="font-size:12px;margin-top:15px;opacity:0.7;"></p>
+  </div>
+  <script>
+    async function auth() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('pass').value;
+      const { error } = await window.supabase.auth.signInWithPassword({ email, password });
+      if (error) document.getElementById('msg').innerText = error.message;
+      else document.getElementById('msg').innerText = "Bem-vindo!";
+    }
+  </script>
+</body>
+</html>
