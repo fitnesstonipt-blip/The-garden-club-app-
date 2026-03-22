@@ -97,4 +97,416 @@
     .btn-whatsapp{width:100%;padding:16px;border-radius:14px;border:none;background:#25D366;color:#fff;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;margin-top:10px;}
     .btn-logout{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(245,245,220,0.2);background:transparent;color:var(--cream);font-size:13px;cursor:pointer;margin-top:10px;opacity:.6;}
 
-    /* ── BOTTOM 
+    /* ── BOTTOM NAV ── */
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0 20px;z-index:30;}
+    .nav-btn{flex:1;text-align:center;cursor:pointer;padding:6px;}
+    .nav-btn .ni{font-size:20px;display:block;}
+    .nav-btn .nl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;opacity:.45;margin-top:2px;}
+    .nav-btn.active .nl{opacity:1;}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(245,245,220,0.95);color:#2D3E24;padding:12px 24px;border-radius:50px;font-size:13px;font-weight:600;z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+    #toast.show{opacity:1;}
+  </style>
+</head>
+<body>
+
+<!-- ══ AUTH ══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="logo">
+      <h1>THE <em>GARDEN</em> CLUB</h1>
+    </div>
+    <input id="a-email" type="email" placeholder="E-mail" autocomplete="email"/>
+    <input id="a-pass" type="password" placeholder="Password" autocomplete="current-password"/>
+    <button class="btn-primary" onclick="handleAuth()">Entrar no Clube</button>
+    <button class="btn-ghost" id="btn-toggle" onclick="toggleMode()">Ainda não tens conta? Regista-te</button>
+    <div id="auth-msg"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app-screen" class="hidden">
+  <div class="app-header">
+    <h1>THE <em>GARDEN</em> CLUB</h1>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('agenda',this)">Agenda</div>
+    <div class="tab" onclick="showTab('conquistas',this)">Conquistas</div>
+    <div class="tab" onclick="showTab('perfil',this)">Perfil</div>
+  </div>
+
+  <!-- AGENDA -->
+  <div id="tab-agenda">
+    <div class="week-nav">
+      <button onclick="changeWeek(-1)">&#8592;</button>
+      <div class="week-label">
+        <span id="week-month">Março 2026</span>
+        <strong id="week-range">22 – 28 Mar</strong>
+      </div>
+      <button onclick="changeWeek(1)">&#8594;</button>
+    </div>
+    <div class="days-strip" id="days-strip"></div>
+    <div class="classes-list" id="classes-list">
+      <p class="no-classes">A carregar aulas...</p>
+    </div>
+  </div>
+
+  <!-- CONQUISTAS -->
+  <div id="tab-conquistas" class="hidden">
+    <div class="stats-row">
+      <div class="stat-card"><div class="sv" id="stat-total">0</div><div class="sl">Aulas este mês</div></div>
+      <div class="stat-card"><div class="sv" id="stat-streak">0</div><div class="sl">Semanas seguidas</div></div>
+    </div>
+    <div id="conquistas-grid"></div>
+  </div>
+
+  <!-- PERFIL -->
+  <div id="tab-perfil" class="hidden">
+    <div class="profile-header">
+      <div class="avatar">🌿</div>
+      <div class="profile-name" id="p-name">Membro</div>
+      <div class="profile-email" id="p-email"></div>
+    </div>
+    <div class="menu-item">
+      <div><div class="menu-item-label">Plano Atual</div><div class="menu-item-sub" id="p-plano">A carregar...</div></div>
+      <span class="menu-arrow">›</span>
+    </div>
+    <div class="menu-item">
+      <div><div class="menu-item-label">Próxima Renovação</div><div class="menu-item-sub">1 de Abril 2026</div></div>
+      <span class="menu-arrow">›</span>
+    </div>
+    <div class="menu-item" onclick="showTab('conquistas', document.querySelectorAll('.tab')[1])">
+      <div><div class="menu-item-label">Calendário de Conquistas</div><div class="menu-item-sub">Ver histórico de aulas</div></div>
+      <span class="menu-arrow">›</span>
+    </div>
+    <button class="btn-whatsapp" onclick="window.open('https://wa.me/351900000000','_blank')">💬 Suporte WhatsApp</button>
+    <button class="btn-logout" onclick="logout()">Terminar Sessão</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-btn active" id="nav-agenda" onclick="showTab('agenda',document.querySelectorAll('.tab')[0]);setNav('agenda')">
+      <span class="ni">📅</span><span class="nl">Agenda</span>
+    </div>
+    <div class="nav-btn" id="nav-conquistas" onclick="showTab('conquistas',document.querySelectorAll('.tab')[1]);setNav('conquistas')">
+      <span class="ni">🌿</span><span class="nl">Conquistas</span>
+    </div>
+    <div class="nav-btn" id="nav-perfil" onclick="showTab('perfil',document.querySelectorAll('.tab')[2]);setNav('perfil')">
+      <span class="ni">👤</span><span class="nl">Perfil</span>
+    </div>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── STATE ──
+  let isRegisterMode = false;
+  let currentUser = null;
+  let currentWeekStart = getMonday(new Date());
+  let selectedDay = new Date();
+  let myBookings = [];
+
+  // ── AUTH ──
+  function toggleMode(){
+    isRegisterMode = !isRegisterMode;
+    document.getElementById('btn-toggle').innerText = isRegisterMode ? "Já tens conta? Entra aqui" : "Ainda não tens conta? Regista-te";
+    document.querySelector('.btn-primary').innerText = isRegisterMode ? "Criar Conta" : "Entrar no Clube";
+    document.getElementById('auth-msg').innerText = "";
+  }
+
+  async function handleAuth(){
+    const email = document.getElementById('a-email').value.trim();
+    const pass  = document.getElementById('a-pass').value;
+    const msg   = document.getElementById('auth-msg');
+    if(!email||!pass){msg.innerText="Preenche todos os campos.";return;}
+    msg.innerText="A processar...";
+    if(isRegisterMode){
+      const {error} = await supabase.auth.signUp({email,password:pass});
+      if(error) msg.innerText=error.message;
+      else msg.innerText="Conta criada! Confirma o e-mail ou entra diretamente.";
+    } else {
+      const {data,error} = await supabase.auth.signInWithPassword({email,password:pass});
+      if(error) msg.innerText=error.message;
+      else initApp(data.user);
+    }
+  }
+
+  async function logout(){
+    await supabase.auth.signOut();
+    document.getElementById('app-screen').classList.add('hidden');
+    document.getElementById('auth-screen').classList.remove('hidden');
+  }
+
+  // ── INIT ──
+  async function initApp(user){
+    currentUser = user;
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app-screen').classList.remove('hidden');
+    document.getElementById('p-email').innerText = user.email;
+
+    // Buscar perfil
+    const {data:perfil} = await supabase.from('perfis').select('*').eq('id',user.id).single();
+    if(perfil){
+      document.getElementById('p-name').innerText = perfil.nome_completo || 'Membro';
+      document.getElementById('p-plano').innerText = perfil.plano || 'Grupo';
+    }
+
+    await loadMyBookings();
+    renderWeek();
+    loadConquistas();
+  }
+
+  // ── BOOKINGS ──
+  async function loadMyBookings(){
+    const {data} = await supabase.from('marcacoes').select('aula_id,estado').eq('aluno_id',currentUser.id);
+    myBookings = data || [];
+  }
+
+  function isBooked(aulaId){
+    return myBookings.some(b=>b.aula_id===aulaId && b.estado==='confirmada');
+  }
+  function isWaiting(aulaId){
+    return myBookings.some(b=>b.aula_id===aulaId && b.estado==='lista_espera');
+  }
+
+  // ── WEEK HELPERS ──
+  function getMonday(d){
+    const dt = new Date(d);
+    const day = dt.getDay();
+    const diff = dt.getDate() - day + (day===0?-6:1);
+    dt.setDate(diff);
+    dt.setHours(0,0,0,0);
+    return dt;
+  }
+
+  function changeWeek(dir){
+    currentWeekStart = new Date(currentWeekStart);
+    currentWeekStart.setDate(currentWeekStart.getDate() + dir*7);
+    renderWeek();
+  }
+
+  function renderWeek(){
+    const days = ['Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const strip = document.getElementById('days-strip');
+    strip.innerHTML='';
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    for(let i=0;i<6;i++){
+      const d = new Date(currentWeekStart);
+      d.setDate(d.getDate()+i);
+      const isActive = d.getTime()===selectedDay.setHours(0,0,0,0);
+      const pill = document.createElement('div');
+      pill.className='day-pill'+(isActive?' active':'');
+      pill.innerHTML=`<span class="dn">${days[i]}</span><span class="dd">${d.getDate()}</span>`;
+      pill.onclick=(()=>{
+        const dd=new Date(d);
+        return ()=>{selectedDay=dd;renderWeek();loadClasses();}
+      })();
+      strip.appendChild(pill);
+    }
+
+    // Week label
+    const end = new Date(currentWeekStart); end.setDate(end.getDate()+5);
+    const months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    document.getElementById('week-month').innerText = months[currentWeekStart.getMonth()]+' '+currentWeekStart.getFullYear();
+    document.getElementById('week-range').innerText = currentWeekStart.getDate()+' – '+end.getDate()+' '+months[end.getMonth()];
+
+    loadClasses();
+  }
+
+  async function loadClasses(){
+    const list = document.getElementById('classes-list');
+    list.innerHTML='<p class="no-classes">A carregar...</p>';
+
+    const d = new Date(selectedDay);
+    const dateStr = d.toISOString().split('T')[0];
+
+    // Verificar se é antes do dia 25 e se é mês seguinte
+    const today = new Date(); today.setHours(0,0,0,0);
+    const nextMonthStart = new Date(today.getFullYear(), today.getMonth()+1, 1);
+    const openDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    if(d >= nextMonthStart && today < openDate){
+      list.innerHTML='<p class="no-classes">As marcações para o próximo mês abrem no dia 25 🌿</p>';
+      return;
+    }
+
+    const {data:aulas,error} = await supabase
+      .from('aulas_grupo')
+      .select('*')
+      .eq('dia_semana', d.getDay())
+      .order('hora',{ascending:true});
+
+    if(error||!aulas||aulas.length===0){
+      list.innerHTML='<p class="no-classes">Sem aulas neste dia 🌿</p>';
+      return;
+    }
+
+    // Contar marcações por aula
+    const aulaIds = aulas.map(a=>a.id);
+    const {data:counts} = await supabase
+      .from('marcacoes')
+      .select('aula_id')
+      .in('aula_id',aulaIds)
+      .eq('estado','confirmada');
+
+    const countMap = {};
+    (counts||[]).forEach(c=>{ countMap[c.aula_id]=(countMap[c.aula_id]||0)+1; });
+
+    list.innerHTML = aulas.map(aula=>{
+      const booked = isBooked(aula.id);
+      const waiting = isWaiting(aula.id);
+      const taken = countMap[aula.id]||0;
+      const free = 6 - taken;
+      const full = free<=0 && !booked;
+
+      let spotsHtml='';
+      if(booked) spotsHtml=`<span class="spots-badge">✓ Reservado</span>`;
+      else if(full) spotsHtml=`<span class="spots-badge">Esgotado</span>`;
+      else if(free===1) spotsHtml=`<span class="spots-badge urgent">⚡ Última vaga!</span>`;
+      else spotsHtml=`<span class="spots-badge">${free}/6 vagas</span>`;
+
+      let btnHtml='';
+      if(booked) btnHtml=`<button class="btn-cancel" onclick="cancelBook('${aula.id}')">Cancelar</button>`;
+      else if(full && !waiting) btnHtml=`<button class="btn-waitlist" onclick="joinWaitlist('${aula.id}')">Lista de espera</button>`;
+      else if(waiting) btnHtml=`<button class="btn-waitlist" style="opacity:.5">Em espera</button>`;
+      else btnHtml=`<button class="btn-book" onclick="bookClass('${aula.id}','${aula.hora}')">Reservar</button>`;
+
+      return `
+        <div class="class-card${booked?' booked':''}${full&&!booked?' full':''}">
+          <div>
+            <div class="ci-time">${aula.hora.substring(0,5)}</div>
+            <div class="ci-name">${aula.tipo_aula}</div>
+            <div class="ci-inst">${aula.instrutor}</div>
+          </div>
+          <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+            ${spotsHtml}
+            ${btnHtml}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function bookClass(aulaId, hora){
+    // Verificar se já tem 30 dias de antecedência
+    const today = new Date(); today.setHours(0,0,0,0);
+    const classDay = new Date(selectedDay); classDay.setHours(0,0,0,0);
+    const diffDays = Math.floor((classDay-today)/(1000*60*60*24));
+    if(diffDays>30){showToast("Só podes reservar com 30 dias de antecedência.");return;}
+
+    const {error} = await supabase.from('marcacoes').insert({
+      aluno_id: currentUser.id,
+      aula_id: aulaId,
+      data_aula: selectedDay.toISOString().split('T')[0],
+      estado: 'confirmada'
+    });
+
+    if(error){
+      if(error.code==='23505') showToast("Já tens esta aula reservada.");
+      else showToast("Erro ao reservar. Tenta novamente.");
+    } else {
+      showToast("Aula reservada com sucesso! 🌿");
+      await loadMyBookings();
+      loadClasses();
+    }
+  }
+
+  async function cancelBook(aulaId){
+    // Verificar janela de 12h
+    const classDay = new Date(selectedDay);
+    const now = new Date();
+    const diffHours = (classDay - now) / (1000*60*60);
+    if(diffHours < 12){
+      showToast("Cancelamento tardio: crédito será descontado.");
+    }
+
+    const {error} = await supabase.from('marcacoes')
+      .delete()
+      .eq('aluno_id',currentUser.id)
+      .eq('aula_id',aulaId);
+
+    if(!error){
+      showToast("Aula cancelada.");
+      await loadMyBookings();
+      loadClasses();
+    }
+  }
+
+  async function joinWaitlist(aulaId){
+    const {error} = await supabase.from('marcacoes').insert({
+      aluno_id: currentUser.id,
+      aula_id: aulaId,
+      data_aula: selectedDay.toISOString().split('T')[0],
+      estado: 'lista_espera'
+    });
+    if(!error){
+      showToast("Entraste na lista de espera 🌿");
+      await loadMyBookings();
+      loadClasses();
+    }
+  }
+
+  // ── CONQUISTAS ──
+  async function loadConquistas(){
+    const now = new Date();
+    const {data:marcacoes} = await supabase
+      .from('marcacoes')
+      .select('data_aula')
+      .eq('aluno_id',currentUser.id)
+      .eq('estado','confirmada');
+
+    const attended = new Set((marcacoes||[]).map(m=>m.data_aula));
+    document.getElementById('stat-total').innerText = [...attended].filter(d=>{
+      const dt=new Date(d);
+      return dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear();
+    }).length;
+
+    // Render calendar grid
+    const grid = document.getElementById('conquistas-grid');
+    const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    let html='';
+    for(let m=now.getMonth();m>=Math.max(0,now.getMonth()-2);m--){
+      const year = now.getFullYear();
+      const daysInMonth = new Date(year,m+1,0).getDate();
+      html+=`<div class="month-grid"><h3>${months[m]} ${year}</h3><div class="cal-grid">`;
+      for(let d=1;d<=daysInMonth;d++){
+        const dateStr=`${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const wasAttended=attended.has(dateStr);
+        html+=`<div class="cal-day${wasAttended?' attended':''}">${d}</div>`;
+      }
+      html+='</div></div>';
+    }
+    grid.innerHTML=html;
+  }
+
+  // ── UI HELPERS ──
+  function showTab(name, el){
+    ['agenda','conquistas','perfil'].forEach(t=>{
+      document.getElementById('tab-'+t).classList.toggle('hidden',t!==name);
+    });
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    if(el) el.classList.add('active');
+  }
+
+  function setNav(name){
+    ['agenda','conquistas','perfil'].forEach(n=>{
+      document.getElementById('nav-'+n).classList.toggle('active',n===name);
+    });
+  }
+
+  function showToast(msg){
+    const t=document.getElementById('toast');
+    t.innerText=msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),3000);
+  }
+
+  // ── BOOT ──
+  window.onload = async ()=>{
+    const {data:{session}} = await supabase.auth.getSession();
+    if(session) initApp(session.user);
+  };
+</script>
+</body>
+</html>
