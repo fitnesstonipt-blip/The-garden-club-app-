@@ -10,27 +10,62 @@
   </script>
   <style>
     body{background:#2D3E24;color:#F5F5DC;font-family:sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;padding:20px;text-align:center;}
-    .card{background:rgba(245,245,220,0.05);padding:30px;border-radius:20px;border:1px solid rgba(245,245,220,0.1);width:100%;max-width:350px;}
-    h1{letter-spacing:0.3em;font-weight:300;font-size:20px;margin-bottom:30px;}
-    input{width:100%;padding:12px;margin:10px 0;border-radius:10px;border:1px solid rgba(245,245,220,0.2);background:rgba(0,0,0,0.2);color:#fff;outline:none;}
-    button{width:100%;padding:15px;margin-top:20px;border-radius:10px;border:none;background:#F5F5DC;color:#2D3E24;font-weight:bold;text-transform:uppercase;letter-spacing:0.1em;}
+    .card{background:rgba(245,245,220,0.06);padding:30px;border-radius:20px;border:1px solid rgba(245,245,220,0.1);width:100%;max-width:350px;backdrop-filter:blur(10px);}
+    h1{letter-spacing:0.3em;font-weight:300;font-size:18px;margin-bottom:30px;text-transform:uppercase;}
+    .garden{font-style:italic;font-family:serif;}
+    input{width:100%;padding:14px;margin:10px 0;border-radius:12px;border:1px solid rgba(245,245,220,0.2);background:rgba(0,0,0,0.2);color:#fff;outline:none;font-size:16px;}
+    button{width:100%;padding:16px;margin-top:20px;border-radius:12px;border:none;background:#F5F5DC;color:#2D3E24;font-weight:bold;text-transform:uppercase;letter-spacing:0.1em;transition:0.3s;}
+    button:active{transform:scale(0.98);opacity:0.8;}
+    .ghost{background:transparent;border:1px solid rgba(245,245,220,0.3);color:#F5F5DC;margin-top:10px;padding:12px;font-size:11px;}
+    #msg{font-size:12px;margin-top:20px;min-height:20px;line-height:1.4;opacity:0.9;}
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>THE GARDEN CLUB</h1>
-    <input id="email" type="email" placeholder="E-mail">
-    <input id="pass" type="password" placeholder="Password">
-    <button onclick="auth()">Entrar no Clube</button>
-    <p id="msg" style="font-size:12px;margin-top:15px;opacity:0.7;"></p>
+    <h1>THE <span class="garden">GARDEN</span> CLUB</h1>
+    
+    <div id="auth-form">
+      <input id="email" type="email" placeholder="E-mail" autocomplete="email">
+      <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+      
+      <button id="btn-primary" onclick="handleAuth()">Entrar no Clube</button>
+      <button id="btn-toggle" class="ghost" onclick="toggleMode()">Ainda não tens conta? Regista-te</button>
+    </div>
+
+    <p id="msg"></p>
   </div>
+
   <script>
-    async function auth() {
+    let isRegisterMode = false;
+
+    function toggleMode() {
+      isRegisterMode = !isRegisterMode;
+      document.getElementById('btn-primary').innerText = isRegisterMode ? "Criar Conta" : "Entrar no Clube";
+      document.getElementById('btn-toggle').innerText = isRegisterMode ? "Já tens conta? Entra aqui" : "Ainda não tens conta? Regista-te";
+      document.getElementById('msg').innerText = "";
+    }
+
+    async function handleAuth() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('pass').value;
-      const { error } = await window.supabase.auth.signInWithPassword({ email, password });
-      if (error) document.getElementById('msg').innerText = error.message;
-      else document.getElementById('msg').innerText = "Bem-vindo!";
+      const msg = document.getElementById('msg');
+      
+      if(!email || !password) {
+        msg.innerText = "Por favor, preenche todos os campos.";
+        return;
+      }
+
+      msg.innerText = "A processar...";
+      
+      if (isRegisterMode) {
+        const { data, error } = await window.supabase.auth.signUp({ email, password });
+        if (error) msg.innerText = "Erro: " + error.message;
+        else msg.innerText = "Conta criada! Verifica o teu e-mail para confirmar (se ativo) ou tenta entrar.";
+      } else {
+        const { data, error } = await window.supabase.auth.signInWithPassword({ email, password });
+        if (error) msg.innerText = "Erro: " + error.message;
+        else msg.innerText = "Bem-vindo ao Clube! Login efetuado com sucesso.";
+      }
     }
   </script>
 </body>
